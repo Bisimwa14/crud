@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sign Up &mdash; BudgetFlow</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: { brand: { DEFAULT: "#0f766e", light: "#14b8a6", dark: "#115e59" } },
+          },
+        },
+      };
+    </script>
+  </head>
+
+  <body class="min-h-screen bg-gradient-to-br from-slate-50 via-white to-teal-50 text-slate-800 antialiased">
+    <!-- NAV -->
+    <nav class="sticky top-0 z-50 backdrop-blur bg-white/70 border-b border-slate-200">
+      <div class="max-w-6xl mx-auto flex items-center justify-between px-6 py-3">
+        <a href="/" class="text-xl font-bold tracking-tight text-teal-800">Budget<span class="text-teal-500">Flow</span></a>
+        <div id="nav-auth" class="flex items-center gap-4"></div>
+      </div>
+    </nav>
+
+    <main class="flex items-center justify-center px-6 py-20">
+      <div class="w-full max-w-md">
+        <div class="bg-white rounded-2xl shadow-xl border border-slate-100 p-8">
+          <h1 class="text-2xl font-bold text-center mb-1">Create an account</h1>
+          <p class="text-sm text-slate-500 text-center mb-8">Start tracking your budget for free</p>
+
+          <div id="error" class="hidden mb-4 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-4 py-3"></div>
+
+          <form id="registerForm" class="space-y-5">
+            <div>
+              <label for="name" class="block text-sm font-medium text-slate-700 mb-1">Full Name</label>
+              <input id="name" type="text" required placeholder="Jane Doe" class="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition" />
+            </div>
+            <div>
+              <label for="email" class="block text-sm font-medium text-slate-700 mb-1">Email</label>
+              <input id="email" type="email" required placeholder="you@example.com" class="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition" />
+            </div>
+            <div>
+              <label for="password" class="block text-sm font-medium text-slate-700 mb-1">Password</label>
+              <input id="password" type="password" required placeholder="At least 6 characters" minlength="6" class="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition" />
+            </div>
+            <div>
+              <label for="confirm" class="block text-sm font-medium text-slate-700 mb-1">Confirm Password</label>
+              <input id="confirm" type="password" required placeholder="Re-enter password" minlength="6" class="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition" />
+            </div>
+            <button type="submit" id="submitBtn" class="w-full bg-teal-700 hover:bg-teal-600 text-white font-semibold py-2.5 rounded-lg transition flex items-center justify-center gap-2">
+              <span>Create Account</span>
+              <svg id="spinner" class="hidden animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+            </button>
+          </form>
+
+          <p class="mt-6 text-center text-sm text-slate-500">
+            Already have an account?
+            <a href="/login" class="text-teal-700 font-medium hover:underline">Sign in</a>
+          </p>
+        </div>
+      </div>
+    </main>
+
+    <script src="/public/js/auth.js"></script>
+    <script>
+      Auth.requireGuest();
+
+      const form = document.getElementById("registerForm");
+      const errorEl = document.getElementById("error");
+      const spinner = document.getElementById("spinner");
+
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        errorEl.classList.add("hidden");
+
+        const name = document.getElementById("name").value.trim();
+        const email = document.getElementById("email").value.trim();
+        const password = document.getElementById("password").value;
+        const confirm = document.getElementById("confirm").value;
+
+        if (password !== confirm) {
+          errorEl.textContent = "Passwords do not match";
+          errorEl.classList.remove("hidden");
+          return;
+        }
+
+        spinner.classList.remove("hidden");
+
+        try {
+          const res = await fetch("/api/v1/auth/register", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name, email, password }),
+          });
+
+          const data = await res.json();
+
+          if (!res.ok) {
+            throw new Error(data.message || "Registration failed");
+          }
+
+          Auth.save(data.data.token, data.data.user);
+          window.location.href = "/dashboard";
+        } catch (err) {
+          errorEl.textContent = err.message;
+          errorEl.classList.remove("hidden");
+        } finally {
+          spinner.classList.add("hidden");
+        }
+      });
+    </script>
+  </body>
+</html>

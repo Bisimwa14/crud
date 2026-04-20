@@ -1,0 +1,338 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Budget Tracker &mdash; BudgetFlow</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: { brand: { DEFAULT: "#0f766e", light: "#14b8a6", dark: "#115e59" } },
+          },
+        },
+      };
+    </script>
+  </head>
+
+  <body class="min-h-screen bg-gradient-to-br from-slate-50 via-white to-teal-50 text-slate-800 antialiased">
+    <!-- NAV -->
+    <nav class="sticky top-0 z-50 backdrop-blur bg-white/70 border-b border-slate-200">
+      <div class="max-w-6xl mx-auto flex items-center justify-between px-6 py-3">
+        <a href="/" class="text-xl font-bold tracking-tight text-teal-800">Budget<span class="text-teal-500">Flow</span></a>
+        <div id="nav-auth" class="flex items-center gap-4"></div>
+      </div>
+    </nav>
+
+    <main class="max-w-5xl mx-auto px-6 py-10">
+      <!-- PAGE HEADER -->
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
+        <div>
+          <h1 class="text-2xl font-bold">Budget Tracker</h1>
+          <p class="text-sm text-slate-500 mt-1">Manage your income and expenses</p>
+        </div>
+        <button id="openAddModal" class="inline-flex items-center gap-2 bg-teal-700 hover:bg-teal-600 text-white font-semibold text-sm px-5 py-2.5 rounded-xl transition shadow-sm">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+          Add Entry
+        </button>
+      </div>
+
+      <!-- STATUS -->
+      <div id="status" class="mb-4"></div>
+
+      <!-- FILTER / SEARCH BAR -->
+      <div class="flex flex-wrap gap-3 mb-6">
+        <select id="filterType" class="rounded-lg border border-slate-300 text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500">
+          <option value="">All Types</option>
+          <option value="income">Income</option>
+          <option value="expense">Expense</option>
+        </select>
+        <input id="searchInput" type="text" placeholder="Search by title or category..." class="flex-1 min-w-[200px] rounded-lg border border-slate-300 text-sm px-4 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500" />
+      </div>
+
+      <!-- TABLE -->
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="bg-slate-50 text-left">
+              <tr>
+                <th class="px-5 py-3 font-semibold text-slate-600">Title</th>
+                <th class="px-5 py-3 font-semibold text-slate-600">Type</th>
+                <th class="px-5 py-3 font-semibold text-slate-600">Category</th>
+                <th class="px-5 py-3 font-semibold text-slate-600 text-right">Amount</th>
+                <th class="px-5 py-3 font-semibold text-slate-600">Date</th>
+                <th class="px-5 py-3 font-semibold text-slate-600 text-center">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="entriesBody" class="divide-y divide-slate-100"></tbody>
+          </table>
+        </div>
+        <div id="emptyState" class="hidden text-center py-16 text-slate-400">
+          <svg class="w-12 h-12 mx-auto mb-3 text-slate-300" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 00-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 01-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 003 15h-.75M15 10.5a3 3 0 11-6 0 3 3 0 016 0zm3 0h.008v.008H18V10.5zm-12 0h.008v.008H6V10.5z"/></svg>
+          <p class="font-medium">No budget entries yet</p>
+          <p class="text-sm mt-1">Click "Add Entry" to get started</p>
+        </div>
+      </div>
+    </main>
+
+    <!-- MODAL BACKDROP -->
+    <div id="modalBackdrop" class="hidden fixed inset-0 z-40 bg-black/40 backdrop-blur-sm"></div>
+
+    <!-- ADD / EDIT MODAL -->
+    <div id="entryModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl border border-slate-200 p-7 relative">
+        <button id="closeModal" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+
+        <h2 id="modalTitle" class="text-lg font-bold mb-5">Add Budget Entry</h2>
+
+        <div id="modalError" class="hidden mb-4 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-4 py-3"></div>
+
+        <form id="entryForm" class="space-y-4">
+          <input type="hidden" id="entryId" />
+
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Title</label>
+            <input id="entryTitle" type="text" required placeholder="e.g. Monthly Salary" class="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" />
+          </div>
+
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-slate-700 mb-1">Type</label>
+              <select id="entryType" required class="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500">
+                <option value="income">Income</option>
+                <option value="expense">Expense</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-slate-700 mb-1">Category</label>
+              <input id="entryCategory" type="text" required placeholder="e.g. Salary" class="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-slate-700 mb-1">Amount</label>
+              <input id="entryAmount" type="number" min="0" step="0.01" required placeholder="0.00" class="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-slate-700 mb-1">Date</label>
+              <input id="entryDate" type="date" class="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" />
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Note <span class="text-slate-400 font-normal">(optional)</span></label>
+            <textarea id="entryNote" rows="2" placeholder="Any additional details..." class="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 resize-none"></textarea>
+          </div>
+
+          <div class="flex justify-end gap-3 pt-2">
+            <button type="button" id="cancelModal" class="px-5 py-2.5 text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition">Cancel</button>
+            <button type="submit" id="saveBtn" class="px-5 py-2.5 text-sm font-semibold text-white bg-teal-700 hover:bg-teal-600 rounded-lg transition flex items-center gap-2">
+              <span id="saveBtnText">Save Entry</span>
+              <svg id="saveSpinner" class="hidden animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- DELETE CONFIRM MODAL -->
+    <div id="deleteModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div class="bg-white w-full max-w-sm rounded-2xl shadow-2xl border border-slate-200 p-7 text-center">
+        <div class="w-12 h-12 mx-auto flex items-center justify-center rounded-full bg-red-100 text-red-600 mb-4">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+        </div>
+        <h3 class="text-lg font-bold mb-1">Delete Entry?</h3>
+        <p class="text-sm text-slate-500 mb-6">This action cannot be undone.</p>
+        <div class="flex justify-center gap-3">
+          <button id="cancelDelete" class="px-5 py-2.5 text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition">Cancel</button>
+          <button id="confirmDelete" class="px-5 py-2.5 text-sm font-semibold text-white bg-red-600 hover:bg-red-500 rounded-lg transition">Delete</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="/public/js/auth.js"></script>
+    <script>
+      Auth.requireAuth();
+
+      let allEntries = [];
+      let deleteTargetId = null;
+
+      const entriesBody = document.getElementById("entriesBody");
+      const emptyState = document.getElementById("emptyState");
+      const statusEl = document.getElementById("status");
+      const modalBackdrop = document.getElementById("modalBackdrop");
+      const entryModal = document.getElementById("entryModal");
+      const deleteModal = document.getElementById("deleteModal");
+      const entryForm = document.getElementById("entryForm");
+      const modalTitle = document.getElementById("modalTitle");
+      const modalError = document.getElementById("modalError");
+      const saveSpinner = document.getElementById("saveSpinner");
+      const saveBtnText = document.getElementById("saveBtnText");
+
+      /* ---- MODAL HELPERS ---- */
+      function openModal() {
+        modalBackdrop.classList.remove("hidden");
+        entryModal.classList.remove("hidden");
+        modalError.classList.add("hidden");
+      }
+      function closeModal() {
+        modalBackdrop.classList.add("hidden");
+        entryModal.classList.add("hidden");
+        entryForm.reset();
+        document.getElementById("entryId").value = "";
+        modalTitle.textContent = "Add Budget Entry";
+        saveBtnText.textContent = "Save Entry";
+      }
+      function openDeleteModal(id) {
+        deleteTargetId = id;
+        modalBackdrop.classList.remove("hidden");
+        deleteModal.classList.remove("hidden");
+      }
+      function closeDeleteModal() {
+        deleteTargetId = null;
+        modalBackdrop.classList.add("hidden");
+        deleteModal.classList.add("hidden");
+      }
+
+      document.getElementById("openAddModal").addEventListener("click", () => {
+        document.getElementById("entryDate").value = new Date().toISOString().split("T")[0];
+        openModal();
+      });
+      document.getElementById("closeModal").addEventListener("click", closeModal);
+      document.getElementById("cancelModal").addEventListener("click", closeModal);
+      document.getElementById("cancelDelete").addEventListener("click", closeDeleteModal);
+
+      /* ---- LOAD ENTRIES ---- */
+      async function loadEntries() {
+        try {
+          const data = await api("/budgets");
+          allEntries = data.data;
+          renderEntries();
+        } catch (err) {
+          statusEl.innerHTML = `<div class="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-4 py-3">${err.message}</div>`;
+        }
+      }
+
+      /* ---- RENDER ---- */
+      function renderEntries() {
+        const typeFilter = document.getElementById("filterType").value;
+        const search = document.getElementById("searchInput").value.toLowerCase();
+
+        let filtered = allEntries;
+        if (typeFilter) filtered = filtered.filter((e) => e.type === typeFilter);
+        if (search) filtered = filtered.filter((e) => e.title.toLowerCase().includes(search) || e.category.toLowerCase().includes(search));
+
+        if (filtered.length === 0) {
+          entriesBody.innerHTML = "";
+          emptyState.classList.remove("hidden");
+          return;
+        }
+
+        emptyState.classList.add("hidden");
+
+        entriesBody.innerHTML = filtered
+          .map(
+            (entry) => `
+          <tr class="hover:bg-slate-50/60 transition">
+            <td class="px-5 py-3 font-medium">${escapeHtml(entry.title)}</td>
+            <td class="px-5 py-3">
+              <span class="inline-block text-xs font-semibold px-2.5 py-0.5 rounded-full ${entry.type === "income" ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}">${entry.type}</span>
+            </td>
+            <td class="px-5 py-3 text-slate-500">${escapeHtml(entry.category)}</td>
+            <td class="px-5 py-3 text-right font-semibold tabular-nums ${entry.type === "income" ? "text-emerald-600" : "text-red-600"}">${entry.type === "income" ? "+" : "-"}${Number(entry.amount).toFixed(2)}</td>
+            <td class="px-5 py-3 text-slate-500">${new Date(entry.entryDate).toLocaleDateString()}</td>
+            <td class="px-5 py-3 text-center">
+              <button onclick="editEntry('${entry._id}')" class="text-slate-400 hover:text-teal-600 transition mr-2" title="Edit">
+                <svg class="w-4 h-4 inline" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+              </button>
+              <button onclick="openDeleteModal('${entry._id}')" class="text-slate-400 hover:text-red-600 transition" title="Delete">
+                <svg class="w-4 h-4 inline" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+              </button>
+            </td>
+          </tr>`
+          )
+          .join("");
+      }
+
+      document.getElementById("filterType").addEventListener("change", renderEntries);
+      document.getElementById("searchInput").addEventListener("input", renderEntries);
+
+      /* ---- EDIT ---- */
+      function editEntry(id) {
+        const entry = allEntries.find((e) => e._id === id);
+        if (!entry) return;
+
+        document.getElementById("entryId").value = entry._id;
+        document.getElementById("entryTitle").value = entry.title;
+        document.getElementById("entryType").value = entry.type;
+        document.getElementById("entryCategory").value = entry.category;
+        document.getElementById("entryAmount").value = entry.amount;
+        document.getElementById("entryDate").value = entry.entryDate ? entry.entryDate.split("T")[0] : "";
+        document.getElementById("entryNote").value = entry.note || "";
+
+        modalTitle.textContent = "Edit Budget Entry";
+        saveBtnText.textContent = "Update Entry";
+        openModal();
+      }
+
+      /* ---- SAVE (create or update) ---- */
+      entryForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        modalError.classList.add("hidden");
+        saveSpinner.classList.remove("hidden");
+
+        const id = document.getElementById("entryId").value;
+        const payload = {
+          title: document.getElementById("entryTitle").value.trim(),
+          type: document.getElementById("entryType").value,
+          category: document.getElementById("entryCategory").value.trim(),
+          amount: parseFloat(document.getElementById("entryAmount").value),
+          entryDate: document.getElementById("entryDate").value || undefined,
+          note: document.getElementById("entryNote").value.trim(),
+        };
+
+        try {
+          if (id) {
+            await api(`/budgets/${id}`, { method: "PUT", body: JSON.stringify(payload) });
+          } else {
+            await api("/budgets", { method: "POST", body: JSON.stringify(payload) });
+          }
+          closeModal();
+          await loadEntries();
+        } catch (err) {
+          modalError.textContent = err.message;
+          modalError.classList.remove("hidden");
+        } finally {
+          saveSpinner.classList.add("hidden");
+        }
+      });
+
+      /* ---- DELETE ---- */
+      document.getElementById("confirmDelete").addEventListener("click", async () => {
+        if (!deleteTargetId) return;
+        try {
+          await api(`/budgets/${deleteTargetId}`, { method: "DELETE" });
+          closeDeleteModal();
+          await loadEntries();
+        } catch (err) {
+          alert(err.message);
+          closeDeleteModal();
+        }
+      });
+
+      /* ---- UTILS ---- */
+      function escapeHtml(str) {
+        const div = document.createElement("div");
+        div.textContent = str;
+        return div.innerHTML;
+      }
+
+      /* ---- INIT ---- */
+      loadEntries();
+    </script>
+  </body>
+</html>

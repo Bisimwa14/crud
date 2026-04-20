@@ -6,8 +6,11 @@ import {
     getAllUsers, 
     updateUser 
 } from "../controllers/user.controller.js";
+import { requireAuth } from "../middlewares/auth.middleware.js";
 
 const router = exp.Router();
+
+router.use(requireAuth);
 
 router.route("/users")
   .get(getAllUsers)

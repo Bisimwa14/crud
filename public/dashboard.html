@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dashboard &mdash; BudgetFlow</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: { brand: { DEFAULT: "#0f766e", light: "#14b8a6", dark: "#115e59" } },
+          },
+        },
+      };
+    </script>
+  </head>
+
+  <body class="min-h-screen bg-gradient-to-br from-slate-50 via-white to-teal-50 text-slate-800 antialiased">
+    <!-- NAV -->
+    <nav class="sticky top-0 z-50 backdrop-blur bg-white/70 border-b border-slate-200">
+      <div class="max-w-6xl mx-auto flex items-center justify-between px-6 py-3">
+        <a href="/" class="text-xl font-bold tracking-tight text-teal-800">Budget<span class="text-teal-500">Flow</span></a>
+        <div id="nav-auth" class="flex items-center gap-4"></div>
+      </div>
+    </nav>
+
+    <main class="max-w-5xl mx-auto px-6 py-10">
+      <!-- HEADER -->
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
+        <div>
+          <h1 class="text-2xl font-bold">Dashboard</h1>
+          <p class="text-sm text-slate-500 mt-1" id="welcomeMsg">Your financial overview</p>
+        </div>
+        <a href="/budgets" class="inline-flex items-center gap-2 bg-teal-700 hover:bg-teal-600 text-white font-semibold text-sm px-5 py-2.5 rounded-xl transition shadow-sm">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+          Manage Budgets
+        </a>
+      </div>
+
+      <!-- STATUS -->
+      <div id="status" class="mb-6">
+        <div class="flex items-center gap-3 text-slate-400">
+          <svg class="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+          <span class="text-sm">Loading dashboard...</span>
+        </div>
+      </div>
+
+      <!-- METRICS CARDS -->
+      <div id="metricsSection" class="hidden">
+        <div class="grid sm:grid-cols-3 gap-5 mb-8">
+          <div class="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
+            <div class="flex items-center gap-3 mb-3">
+              <div class="w-10 h-10 flex items-center justify-center rounded-xl bg-emerald-100 text-emerald-600">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+              </div>
+              <span class="text-sm font-medium text-slate-500">Total Income</span>
+            </div>
+            <p class="text-2xl font-bold text-emerald-600 tabular-nums" id="income">0.00</p>
+          </div>
+
+          <div class="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
+            <div class="flex items-center gap-3 mb-3">
+              <div class="w-10 h-10 flex items-center justify-center rounded-xl bg-red-100 text-red-600">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M20 12H4"/></svg>
+              </div>
+              <span class="text-sm font-medium text-slate-500">Total Expense</span>
+            </div>
+            <p class="text-2xl font-bold text-red-600 tabular-nums" id="expense">0.00</p>
+          </div>
+
+          <div class="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
+            <div class="flex items-center gap-3 mb-3">
+              <div class="w-10 h-10 flex items-center justify-center rounded-xl bg-sky-100 text-sky-600">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6m6 0h6m-6 0V9a2 2 0 012-2h2a2 2 0 012 2v10m6 0v-4a2 2 0 00-2-2h-2a2 2 0 00-2 2v4"/></svg>
+              </div>
+              <span class="text-sm font-medium text-slate-500">Net Balance</span>
+            </div>
+            <p class="text-2xl font-bold tabular-nums" id="balance">0.00</p>
+          </div>
+        </div>
+
+        <!-- CATEGORY BREAKDOWN -->
+        <div class="grid lg:grid-cols-2 gap-6 mb-8">
+          <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-100">
+              <h3 class="font-semibold">Category Breakdown</h3>
+            </div>
+            <div id="categoryList" class="divide-y divide-slate-50 max-h-72 overflow-y-auto">
+              <p class="px-6 py-8 text-sm text-slate-400 text-center">No data</p>
+            </div>
+          </div>
+
+          <!-- LATEST ENTRIES -->
+          <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-100">
+              <h3 class="font-semibold">Recent Transactions</h3>
+            </div>
+            <div id="latestEntries" class="divide-y divide-slate-50 max-h-72 overflow-y-auto">
+              <p class="px-6 py-8 text-sm text-slate-400 text-center">No entries</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <script src="/public/js/auth.js"></script>
+    <script>
+      Auth.requireAuth();
+
+      const statusEl = document.getElementById("status");
+      const metricsSection = document.getElementById("metricsSection");
+
+      async function loadDashboard() {
+        try {
+          const data = await api("/dashboard");
+          const d = data.data;
+
+          document.getElementById("welcomeMsg").textContent = `Welcome back, ${d.user.name}`;
+          document.getElementById("income").textContent = d.metrics.totalIncome.toFixed(2);
+          document.getElementById("expense").textContent = d.metrics.totalExpense.toFixed(2);
+
+          const bal = d.metrics.netBalance;
+          const balEl = document.getElementById("balance");
+          balEl.textContent = bal.toFixed(2);
+          balEl.classList.add(bal >= 0 ? "text-emerald-600" : "text-red-600");
+
+          /* Category breakdown */
+          const catList = document.getElementById("categoryList");
+          if (d.breakdownByCategory.length) {
+            catList.innerHTML = d.breakdownByCategory
+              .sort((a, b) => b.total - a.total)
+              .map(
+                (c) => `
+                <div class="flex items-center justify-between px-6 py-3">
+                  <div class="flex items-center gap-2">
+                    <span class="inline-block w-2 h-2 rounded-full ${c.type === "income" ? "bg-emerald-500" : "bg-red-500"}"></span>
+                    <span class="text-sm">${escapeHtml(c.category)}</span>
+                    <span class="text-xs text-slate-400">${c.type}</span>
+                  </div>
+                  <span class="text-sm font-semibold tabular-nums ${c.type === "income" ? "text-emerald-600" : "text-red-600"}">${c.total.toFixed(2)}</span>
+                </div>`
+              )
+              .join("");
+          }
+
+          /* Latest entries */
+          const latestEl = document.getElementById("latestEntries");
+          if (d.latestEntries.length) {
+            latestEl.innerHTML = d.latestEntries
+              .map(
+                (e) => `
+                <div class="flex items-center justify-between px-6 py-3">
+                  <div>
+                    <p class="text-sm font-medium">${escapeHtml(e.title)}</p>
+                    <p class="text-xs text-slate-400">${escapeHtml(e.category)} &middot; ${new Date(e.entryDate).toLocaleDateString()}</p>
+                  </div>
+                  <span class="text-sm font-semibold tabular-nums ${e.type === "income" ? "text-emerald-600" : "text-red-600"}">${e.type === "income" ? "+" : "-"}${Number(e.amount).toFixed(2)}</span>
+                </div>`
+              )
+              .join("");
+          }
+
+          statusEl.innerHTML = "";
+          metricsSection.classList.remove("hidden");
+        } catch (err) {
+          statusEl.innerHTML = `<div class="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-4 py-3">${err.message}</div>`;
+        }
+      }
+
+      function escapeHtml(str) {
+        const d = document.createElement("div");
+        d.textContent = str;
+        return d.innerHTML;
+      }
+
+      loadDashboard();
+    </script>
+  </body>
+</html>
