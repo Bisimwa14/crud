@@ -25,26 +25,58 @@ const Auth = {
   },
 
   headers() {
+    const token = this.getToken();
     return {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${this.getToken()}`,
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
     };
   },
 
-  requireGuest() {
-    if (this.isLoggedIn()) {
-      window.location.href = "/dashboard";
+  async hasValidSession() {
+    try {
+      const res = await fetch(`${API}/auth/profile`, {
+        method: "GET",
+        headers: this.headers(),
+        credentials: "include",
+      });
+
+      return res.ok;
+    } catch {
+      return false;
     }
   },
 
+  requireGuest() {
+    this.hasValidSession().then((isValid) => {
+      if (isValid) {
+        window.location.href = "/dashboard";
+        return;
+      }
+
+      if (this.isLoggedIn()) {
+        this.clear();
+      }
+    });
+  },
+
   requireAuth() {
-    if (!this.isLoggedIn()) {
-      window.location.href = "/login";
+    this.hasValidSession().then((isValid) => {
+      if (!isValid) {
+        this.clear();
+        window.location.href = "/login";
+      }
+    });
+  },
+
+  async syncSession() {
+    const isValid = await this.hasValidSession();
+    if (!isValid && this.isLoggedIn()) {
+      this.clear();
     }
   },
 
   async logout() {
-    await fetch("/api/v1/auth/logout", { method: "POST" }).catch(() => {});
+    await fetch("/api/v1/auth/logout", { method: "POST", credentials: "include" }).catch(() => {});
     this.clear();
     window.location.href = "/";
   },
@@ -53,6 +85,7 @@ const Auth = {
 async function api(endpoint, options = {}) {
   const res = await fetch(`${API}${endpoint}`, {
     headers: Auth.headers(),
+    credentials: "include",
     ...options,
   });
 
@@ -91,4 +124,6 @@ function updateNav() {
   }
 }
 
-document.addEventListener("DOMContentLoaded", updateNav);
+document.addEventListener("DOMContentLoaded", () => {
+  Auth.syncSession().then(updateNav);
+});
