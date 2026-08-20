@@ -14,6 +14,20 @@
         },
       };
     </script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+    <style>
+      .viz-root {
+        --viz-income: #2a78d6;
+        --viz-expense: #eb6834;
+        --viz-grid: #eef2f6;
+        --viz-axis: #cbd5e1;
+        --viz-muted: #94a3b8;
+        --viz-ink: #334155;
+        --viz-surface: #ffffff;
+      }
+      .viz-legend-dot { width: 8px; height: 8px; border-radius: 9999px; display: inline-block; }
+      .viz-chart-wrap { position: relative; }
+    </style>
   </head>
 
   <body class="min-h-screen bg-gradient-to-br from-slate-50 via-white to-teal-50 text-slate-800 antialiased">
@@ -80,13 +94,36 @@
           </div>
         </div>
 
+        <!-- TREND CHART -->
+        <div class="viz-root bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden mb-8">
+          <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+            <h3 class="font-semibold">Income vs Expense Trend</h3>
+            <span class="text-xs text-slate-400">Last 6 months</span>
+          </div>
+          <div class="px-6 py-5">
+            <div id="trendEmpty" class="hidden py-12 text-sm text-slate-400 text-center">No trend data yet</div>
+            <div id="trendChartWrap" class="viz-chart-wrap h-64">
+              <canvas id="trendChart" role="img" aria-label="Monthly income and expense trend"></canvas>
+            </div>
+          </div>
+        </div>
+
         <!-- CATEGORY BREAKDOWN -->
         <div class="grid lg:grid-cols-2 gap-6 mb-8">
-          <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-            <div class="px-6 py-4 border-b border-slate-100">
+          <div class="viz-root bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+            <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
               <h3 class="font-semibold">Category Breakdown</h3>
+              <div class="flex items-center gap-3 text-xs text-slate-500">
+                <span class="flex items-center gap-1.5"><span class="viz-legend-dot" style="background:var(--viz-income)"></span>Income</span>
+                <span class="flex items-center gap-1.5"><span class="viz-legend-dot" style="background:var(--viz-expense)"></span>Expense</span>
+              </div>
             </div>
-            <div id="categoryList" class="divide-y divide-slate-50 max-h-72 overflow-y-auto">
+            <div class="px-6 py-5">
+              <div id="categoryChartWrap" class="viz-chart-wrap h-56 hidden">
+                <canvas id="categoryChart" role="img" aria-label="Spending and income by category"></canvas>
+              </div>
+            </div>
+            <div id="categoryList" class="divide-y divide-slate-50 max-h-72 overflow-y-auto border-t border-slate-50">
               <p class="px-6 py-8 text-sm text-slate-400 text-center">No data</p>
             </div>
           </div>
@@ -144,6 +181,9 @@
               .join("");
           }
 
+          renderTrendChart(d.monthlyTrend || []);
+          renderCategoryChart(d.breakdownByCategory || []);
+
           /* Latest entries */
           const latestEl = document.getElementById("latestEntries");
           if (d.latestEntries.length) {
@@ -172,6 +212,191 @@
         const d = document.createElement("div");
         d.textContent = str;
         return d.innerHTML;
+      }
+
+      const VIZ = {
+        income: "#2a78d6",
+        expense: "#eb6834",
+        grid: "#eef2f6",
+        axis: "#cbd5e1",
+        muted: "#94a3b8",
+        ink: "#334155",
+        surface: "#ffffff",
+      };
+
+      Chart.defaults.font.family = "system-ui, -apple-system, 'Segoe UI', sans-serif";
+      Chart.defaults.color = VIZ.muted;
+
+      let trendChart, categoryChart;
+
+      function currency(value) {
+        return "$" + Number(value).toLocaleString(undefined, { maximumFractionDigits: 0 });
+      }
+
+      function renderTrendChart(monthlyTrend) {
+        const wrap = document.getElementById("trendChartWrap");
+        const empty = document.getElementById("trendEmpty");
+        const hasData = monthlyTrend.some((m) => m.income > 0 || m.expense > 0);
+
+        if (!hasData) {
+          wrap.classList.add("hidden");
+          empty.classList.remove("hidden");
+          return;
+        }
+        wrap.classList.remove("hidden");
+        empty.classList.add("hidden");
+
+        const ctx = document.getElementById("trendChart").getContext("2d");
+        const config = {
+          type: "line",
+          data: {
+            labels: monthlyTrend.map((m) => m.label),
+            datasets: [
+              {
+                label: "Income",
+                data: monthlyTrend.map((m) => m.income),
+                borderColor: VIZ.income,
+                backgroundColor: VIZ.income,
+                borderWidth: 2,
+                pointRadius: 4,
+                pointHoverRadius: 5,
+                pointBackgroundColor: VIZ.income,
+                pointBorderColor: VIZ.surface,
+                pointBorderWidth: 2,
+                tension: 0.25,
+              },
+              {
+                label: "Expense",
+                data: monthlyTrend.map((m) => m.expense),
+                borderColor: VIZ.expense,
+                backgroundColor: VIZ.expense,
+                borderWidth: 2,
+                pointRadius: 4,
+                pointHoverRadius: 5,
+                pointBackgroundColor: VIZ.expense,
+                pointBorderColor: VIZ.surface,
+                pointBorderWidth: 2,
+                tension: 0.25,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: "index", intersect: false },
+            plugins: {
+              legend: {
+                position: "top",
+                align: "start",
+                labels: { usePointStyle: true, pointStyle: "line", color: VIZ.ink, boxWidth: 24, padding: 16 },
+              },
+              tooltip: {
+                backgroundColor: "#1e293b",
+                titleColor: "#f8fafc",
+                bodyColor: "#f8fafc",
+                padding: 10,
+                cornerRadius: 8,
+                boxPadding: 4,
+                callbacks: {
+                  label: (item) => `${item.dataset.label}: ${currency(item.parsed.y)}`,
+                },
+              },
+            },
+            scales: {
+              x: {
+                grid: { display: false },
+                border: { color: VIZ.axis },
+                ticks: { color: VIZ.muted },
+              },
+              y: {
+                beginAtZero: true,
+                grid: { color: VIZ.grid, drawTicks: false },
+                border: { display: false },
+                ticks: { color: VIZ.muted, callback: (v) => currency(v) },
+              },
+            },
+          },
+        };
+
+        if (trendChart) {
+          trendChart.data = config.data;
+          trendChart.update();
+        } else {
+          trendChart = new Chart(ctx, config);
+        }
+      }
+
+      function renderCategoryChart(breakdown) {
+        const wrap = document.getElementById("categoryChartWrap");
+        if (!breakdown.length) {
+          wrap.classList.add("hidden");
+          return;
+        }
+        wrap.classList.remove("hidden");
+
+        const MAX_BARS = 8;
+        const sorted = [...breakdown].sort((a, b) => b.total - a.total);
+        let bars = sorted.slice(0, MAX_BARS);
+        const rest = sorted.slice(MAX_BARS);
+        if (rest.length) {
+          bars = bars.concat([{ category: "Other", type: "other", total: rest.reduce((s, c) => s + c.total, 0) }]);
+        }
+
+        const ctx = document.getElementById("categoryChart").getContext("2d");
+        const config = {
+          type: "bar",
+          data: {
+            labels: bars.map((c) => c.category),
+            datasets: [
+              {
+                data: bars.map((c) => c.total),
+                backgroundColor: bars.map((c) => (c.type === "income" ? VIZ.income : c.type === "expense" ? VIZ.expense : VIZ.muted)),
+                borderRadius: 4,
+                borderSkipped: false,
+                maxBarThickness: 22,
+              },
+            ],
+          },
+          options: {
+            indexAxis: "y",
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                backgroundColor: "#1e293b",
+                titleColor: "#f8fafc",
+                bodyColor: "#f8fafc",
+                padding: 10,
+                cornerRadius: 8,
+                displayColors: false,
+                callbacks: {
+                  label: (item) => currency(item.parsed.x),
+                },
+              },
+            },
+            scales: {
+              x: {
+                beginAtZero: true,
+                grid: { color: VIZ.grid, drawTicks: false },
+                border: { display: false },
+                ticks: { color: VIZ.muted, callback: (v) => currency(v) },
+              },
+              y: {
+                grid: { display: false },
+                border: { color: VIZ.axis },
+                ticks: { color: VIZ.ink },
+              },
+            },
+          },
+        };
+
+        if (categoryChart) {
+          categoryChart.data = config.data;
+          categoryChart.update();
+        } else {
+          categoryChart = new Chart(ctx, config);
+        }
       }
 
       loadDashboard();

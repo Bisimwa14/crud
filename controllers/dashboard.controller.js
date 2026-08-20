@@ -32,6 +32,33 @@ export async function getDashboard(req, res) {
       .sort((a, b) => new Date(b.entryDate) - new Date(a.entryDate))
       .slice(0, 5);
 
+    const MONTHS_BACK = 6;
+    const now = new Date();
+    const monthlyTrend = [];
+    for (let i = MONTHS_BACK - 1; i >= 0; i--) {
+      const monthDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      monthlyTrend.push({
+        month: `${monthDate.getFullYear()}-${String(monthDate.getMonth() + 1).padStart(2, "0")}`,
+        label: monthDate.toLocaleDateString("en-US", { month: "short", year: "2-digit" }),
+        income: 0,
+        expense: 0,
+      });
+    }
+    const trendIndexByMonth = new Map(monthlyTrend.map((m, idx) => [m.month, idx]));
+
+    for (const entry of entries) {
+      const entryDate = new Date(entry.entryDate);
+      const key = `${entryDate.getFullYear()}-${String(entryDate.getMonth() + 1).padStart(2, "0")}`;
+      const idx = trendIndexByMonth.get(key);
+      if (idx === undefined) continue;
+
+      if (entry.type === "income") {
+        monthlyTrend[idx].income += Number(entry.amount || 0);
+      } else if (entry.type === "expense") {
+        monthlyTrend[idx].expense += Number(entry.amount || 0);
+      }
+    }
+
     res.status(200).json({
       success: true,
       data: {
@@ -47,6 +74,7 @@ export async function getDashboard(req, res) {
         },
         breakdownByCategory: Object.values(byCategory),
         latestEntries,
+        monthlyTrend,
       },
     });
   } catch (error) {
