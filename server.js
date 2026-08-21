@@ -24,6 +24,18 @@ app.use(exp.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(passport.initialize());
 
+app.use(async (req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch (error) {
+    console.error("Database connection failed:", error.message);
+    res
+      .status(500)
+      .json({ success: false, message: "Database connection failed" });
+  }
+});
+
 app.use("/public", exp.static(path.join(__dirname, "public")));
 
 app.get("/", (req, res) => {
@@ -57,8 +69,17 @@ app.use((req, res) => {
 
 const PORT = process.env.PORT || 7000;
 
-connectDB().then(() => {
-  app.listen(PORT, () => {
-    console.log(`Server is running on http://localhost:${PORT}`);
-  });
-});
+if (!process.env.VERCEL) {
+  connectDB()
+    .then(() => {
+      app.listen(PORT, () => {
+        console.log(`Server is running on http://localhost:${PORT}`);
+      });
+    })
+    .catch((error) => {
+      console.error("Failed to start server:", error.message);
+      process.exit(1);
+    });
+}
+
+export default app;
